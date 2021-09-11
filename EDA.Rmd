@@ -1,0 +1,693 @@
+---
+title: "EDA"
+author: "zamora tello, Romero Cardenas, Laymito Enriquez, Lopez Soto, Alata Diego"
+date: "10/9/2021"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(readxl)
+library(dplyr)
+library(PerformanceAnalytics)
+library(psych)
+library(GGally)
+library(lattice)
+library(cptcity)
+library(PerformanceAnalytics)
+library(GGally)  
+library(lattice)  
+library(cptcity)
+library(ade4)
+library(factoextra)
+library(corrplot) 
+knitr::opts_chunk$set(echo = TRUE)
+```
+#### GRUPO 2
+
+# DESCRIPCION DEL CASO DE ESTUDIO
+El Perú es un país con una tradición milenaria y un promisorio futuro que no pierde de vista sus raíces y donde el buen comer destaca entre sus habitantes como uno de los signos más distintivos de su identidad.  
+El pueblo peruano es famoso por su paladar exigente, el cual proviene de épocas inmemorables. Las técnicas precolombinas permitieron la preparación de sopas, guisos y pescados crudos. El procesamiento de la comida era parte común de la vida diaria, al contar con conocimientos para salar carne, deshidratar y cocer en hornos de tierra natural. Con la colonización española, unida a la migración africana, china, italiana y japonesa, la cocina peruana acogió diferentes formas de ver el mundo y nuevas técnicas de preparación. Destaca la influencia de España y de China, que originó gastronomías con denominación propia: comida criolla y chifa, respectivamente. 
+La riqueza de la cocina peruana se sustenta en el mestizaje de sus culturas; así como en la existencia de una de las mayores biodiversidades de la Tierra, lo que ha producido el nacimiento y evolución de gastronomías únicas.
+Lima, ha sido declarada capital gastronómica de Latinoamérica gracias a la amplitud y exquisitez de platillos aprobados de forma contundente por los más prestigiosos chefs y restaurantes, los cuales son impulsores de innovaciones y vanguardias a través de la alta cocina.
+
+
+
+# DESCRIPCION DE LAS VARIABLES
+
+El conjunto de datos de Kaggle usado contiene información que ha sido extraída de Tripadvisor y GooglePlaces mediante Ryest, Requests y Selenium. Los datos contenidos aquí tienen que ver con reseñas de los restaurantes en 9 distritos de la ciudad de Lima, Perú. Los distritos son: Jesús María, La Victoria, Lima, Lince, Los Olivos, Pueblo Libre, San Borja, San Isidro y San Martin de Porres.
+En total se obtuvo información de 1217 restaurantes y más de 160600 reseñas, en un tiempo de 11 años (2010 y 2021). En el conjunto de datos tenemos un total de 23 funciones, entre las cuales podemos encontrar distintos campos, tales como información del restaurante: identificación, nombre, ubicación en x e y, etc. Por otra parte, también encontramos lo relacionado a las reseñas: disgusto, confianza, etc
+Nuestras variables con su respectiva descripción se muestran en el siguiente cuadro
+```{r}
+datavariable <- read_excel("variables.xlsx")
+knitr::kable(datavariable)
+```
+
+El cuadro muestra los campos al iniciar el proceso del conjunto de datos; a continuación, se mostrará finalmente las variables a trabajar:
+
+```{r}
+datavariable1 <- read_excel("variables1.xlsx")
+knitr::kable(datavariable1)
+```
+
+# ANALISIS EXPLORATORIO DE DATOS(EDA)
+
+```{r}
+(data1 <- read_excel("restaurantes3.xlsx"))
+glimpse(data1)
+
+# distribucion de NA en las variables  y  observaciones
+mice::md.pattern(data1,rotate.names= TRUE )
+VIM::aggr(data1 , numbers = T , SortVar = T)
+```
+
+# missing values
+
+**CANTIDAD DE NA**
+
+```{r}
+sum(is.na( data1$n_reviews) )
+sum(is.na( data1$min_price) )
+sum(is.na( data1$max_price) )
+```
+
+```{r}
+#calculo de mediana para n_reviews
+data1 %>%
+  dplyr::summarise(n_reviews=median(n_reviews,na.rm = T ))
+
+##calculo de mediana para min_price
+data1 %>%
+  dplyr::summarise(min_price=median(min_price,na.rm = T ))
+```
+
+ **reemplazando los NA por mediana**
+
+```{r}
+data2<- data1 %>% 
+ mutate(n_reviews= ifelse(is.na(n_reviews) , 41,n_reviews),
+        min_price= ifelse(is.na(min_price) , 325,min_price)
+)
+(view(data2))
+```
+
+# Multicolineidad
+
+```{r}
+
+data3 <- data2 %>%
+  dplyr::select(-x,-y,-district,-direction ,-max_price)
+dataordenada<- data3 %>%
+  dplyr::select(-min_price,-n_reviews)
+```
+
+```{r}
+data4 <- data3 %>%
+  dplyr::select(-name,-id,-min_price,-n_reviews) 
+```
+
+**GRAFICO DE CORRELACION**
+
+```{r}
+
+chart.Correlation(data4, histogram = TRUE, method = "pearson")
+```
+
+
+# Outliers
+
+**DIAGRAMA DE CAJAS **
+
+```{r}
+(data5 <- dplyr::filter(dataordenada,name =="KFC"  | name == "Pizza Hut"| name == "Bembos"|name == "El Chinito" | name == "El Chinito"|name == "Embarcadero 41" |name == "McDonald's" | name == "Norky's"|name == "Papa John's"|name == "Popeyes"
+|name == "Roky's"| name == "Roky's"|name == "Rustica"|name == "Starbucks"))
+```
+
+**analisis de la variable confianza**
+
+```{r}
+(data6 <- data5 %>% 
+    group_by(name,confianza ) %>% 
+    ggplot(mapping = aes(x = name, y = confianza, fill = name))+
+    geom_boxplot()+
+    labs (title = "CONFIANZA",
+          x = "nombre del restaurante",
+          y = "confianza"
+    ))
+```
+
+**analisis de la variable enfado**
+
+```{r}
+(data7<- data5 %>% 
+    group_by(name,enfado ) %>% 
+    ggplot(mapping = aes(x = name, y = enfado, fill = name))+
+    geom_boxplot()+
+    labs (title = "ENFADO",
+          x = "nombre del restaurante",
+          y = "enfado"
+    ))
+```
+
+**analisis de la variable anticipacion**
+
+```{r}
+(data8 <- data5 %>% 
+    group_by(name,anticipacion ) %>% 
+    ggplot(mapping = aes(x = name, y = anticipacion, fill = name))+
+    geom_boxplot()+
+    labs (title = "anticipacion",
+          x = "nombre del restaurante",
+          y = "anticipacion"
+    ))
+```
+
+**analisis de la variable disgusto**
+
+```{r}
+(data9 <- data5 %>% 
+    group_by(name,disgusto ) %>% 
+    ggplot(mapping = aes(x = name, y = disgusto , fill = name))+
+    geom_boxplot()+
+    labs (title = "disgusto",
+          x = "nombre del restaurante",
+          y = "disgusto"
+    ))
+```
+
+**analisis de la variable temor**
+
+```{r}
+(data10 <- data5 %>% 
+    group_by(name,temor ) %>% 
+    ggplot(mapping = aes(x = name, y = temor , fill = name))+
+    geom_boxplot()+
+    labs (title = "temor",
+          x = "nombre del restaurante",
+          y = "temor"
+    ))
+```
+
+**analisis de la variable alegria**
+
+```{r}
+(data11 <- data5 %>% 
+    group_by(name,alegria ) %>% 
+    ggplot(mapping = aes(x = name, y = alegria , fill = name))+
+    geom_boxplot()+
+    labs (title = "alegria",
+          x = "nombre del restaurante",
+          y = "alegria"
+    ))
+```
+
+**analisis de la variable tristesa**
+
+```{r}
+(data12 <- data5 %>% 
+    group_by(name,tristesa ) %>% 
+    ggplot(mapping = aes(x = name, y = tristesa , fill = name))+
+    geom_boxplot()+
+    labs (title = "tristesa",
+          x = "nombre del restaurante",
+          y = "triste"
+    ))
+```
+
+**analisis de la variable sorpresa**
+
+```{r}
+(data13 <- data5 %>% 
+    group_by(name,sorpresa ) %>% 
+    ggplot(mapping = aes(x = name, y = sorpresa , fill = name))+
+    geom_boxplot()+
+    labs (title = "sorpresa",
+          x = "nombre del restaurante",
+          y = "sorpresa"
+    ))
+```
+
+**analisis de la variable negative**
+
+```{r}
+(data14 <- data5 %>% 
+    group_by(name,negative ) %>% 
+    ggplot(mapping = aes(x = name, y = negative , fill = name))+
+    geom_boxplot()+
+    labs (title = "negative",
+          x = "nombre del restaurante",
+          y = "negative"
+    ))
+```
+
+**analisis de la variable positive**
+
+```{r}
+(data15 <- data5 %>% 
+    group_by(name,positive ) %>% 
+    ggplot(mapping = aes(x = name, y = positive , fill = name))+
+    geom_boxplot()+
+    labs (title = "positive",
+          x = "nombre del restaurante",
+          y = "positive"
+    ))
+```
+
+**analisis de la variable   stars_1**
+
+```{r}
+(data16 <- data5 %>% 
+    group_by(name,stars_1 ) %>% 
+    ggplot(mapping = aes(x = name, y = stars_1, fill = name))+
+    geom_boxplot()+
+    labs (title = "1 estrellas",
+          x = "nombre del restaurante",
+          y = "1 estrellas"
+    ))
+```
+
+**analisis de la variable   stars_2**
+
+```{r}
+(data17 <- data5 %>% 
+    group_by(name,stars_2 ) %>% 
+    ggplot(mapping = aes(x = name, y = stars_2, fill = name))+
+    geom_boxplot()+
+    labs (title = "2 estrellas",
+          x = "nombre del restaurante",
+          y = "2 estrellas"
+    ))
+```
+
+**analisis de la variable   stars_3**
+
+```{r}
+(data18 <- data5 %>% 
+    group_by(name,stars_3 ) %>% 
+    ggplot(mapping = aes(x = name, y = stars_3, fill = name))+
+    geom_boxplot()+
+    labs (title = "3 estrellas",
+          x = "nombre del restaurante",
+          y = "3 estrellas"
+    ))
+```
+
+**analisis de la variable   stars_4**
+
+```{r}
+(data19 <- data5 %>% 
+    group_by(name,stars_4 ) %>% 
+    ggplot(mapping = aes(x = name, y = stars_4, fill = name))+
+    geom_boxplot()+
+    labs (title = "4 estrellas",
+          x = "nombre del restaurante",
+          y = "4 estrellas"
+    ))
+```
+
+**analisis de la variable   stars_5**
+
+```{r}
+(data20 <- data5 %>% 
+    group_by(name,stars_5 ) %>% 
+    ggplot(mapping = aes(x = name, y = stars_5, fill = name))+
+    geom_boxplot()+
+    labs (title = "5 estrellas",
+          x = "nombre del restaurante",
+          y = "5 estrellas"
+    ))
+```
+
+# Distribucion de variables
+
+**histograma de stars_1**
+
+```{r}
+hist(data4$stars_1, freq = T, col = "blue", labels = T)
+```
+
+**histograma de stars_2**
+
+```{r}
+hist(data4$stars_2, freq = T, col = "blue", labels = T)
+```
+
+**histograma de stars_3**
+
+```{r}
+hist(data4$stars_3, freq = T, col = "blue", labels = T)
+```
+
+**histograma de stars_4**
+
+```{r}
+hist(data4$stars_4, freq = T, col = "blue", labels = T)
+```
+
+**histograma de stars_5**
+
+```{r}
+hist(data4$stars_5, freq = T, col = "blue", labels = T)
+```
+
+**histograma de positive**
+
+```{r}
+hist(data4$positive, freq = T, col = "red", labels = T)
+```
+
+**histograma de negative**
+
+```{r}
+hist(data4$negative, freq = T, col = "skyblue", labels = T)
+```
+
+**histograma de sopresa**
+
+```{r}
+hist(data4$sorpresa, freq = T, col = "blue", labels = T)
+```
+
+**histograma de tristesa**
+
+```{r}
+hist(data4$tristesa, freq = T, col = "blue", labels = T)
+```
+
+**histograma de alegria**
+
+```{r}
+hist(data4$alegria, freq = T, col = "blue", labels = T)
+```
+
+**histograma de temor**
+
+```{r}
+hist(data4$temor, freq = T, col = "blue", labels = T)
+```
+
+**histograma de disgusto**
+
+```{r}
+hist(data4$disgusto, freq = T, col = "blue", labels = T)
+```
+
+**histograma de anticipacion**
+
+```{r}
+hist(data4$anticipacion, freq = T, col = "blue", labels = T)
+```
+
+**histograma de enfado**
+
+```{r}
+hist(data4$enfado, freq = T, col = "black", labels = T)
+```
+
+**histograma de confianza**
+
+```{r}
+hist(data4$confianza, freq = T, col = "green", labels = T)
+```
+
+
+# PCA 
+
+# ANALISIS DE COMPONENTES PRINCIPALES 
+## CARGA DE DATASET 
+
+```{r}
+dataset <- read_csv("C:/Users/KEVIN/Downloads/PCA/PCA/Rest.csv") %>% 
+  drop_na() %>% 
+  dplyr::select(-id, -name, -x, -y, -district, -direction, -n_reviews,     -min_price, -max_price)
+
+```
+
+
+## Muestra de las principales operaciones de nuestro dataset.
+
+```{r}
+describe(dataset)
+```
+
+## Estandarización del dataset
+
+```{r}
+scale_data <- scale(dataset)
+```
+
+## Matriz varianza covarianza
+
+```{r}
+cov <- cov(scale_data)
+```
+
+## Matriz de correlación
+
+```{r}
+mtx <- cor(scale_data)
+```
+
+## Correlacion entre variables con levelplot
+
+```{r}
+levelplot(
+  mtx,
+  col.regions =
+    cpt(
+      pal = "cb_div_RdBu_11",  
+      n = 100, rev = F        
+    )
+)
+
+```
+
+## Analizando los componentes principales
+
+```{r}
+pca <-
+  dudi.pca(
+    scale_data,               
+    scale = F, scannf = F,    
+    nf = ncol(scale_data)     
+  )
+
+summary(pca)
+```
+
+## Autovalores
+
+```{r}
+pca$eig 
+```
+
+## Autovectores
+
+```{r}
+pca$c1
+```
+
+## Grafico de sedimentacion o screeplop
+
+```{r}
+fviz_eig(pca, addlabels = T) +
+  theme_bw()
+```
+
+## Matriz de correlación entre los componentes principales y las variables originales
+
+```{r}
+pca$co
+
+levelplot(
+  as.matrix(pca$co),
+  col.regions = 
+    cpt(
+      pal = "cb_div_RdBu_11", n = 100, rev = F
+    )
+)
+```
+
+## Contribucion de variables a los componentes
+
+```{r}
+contrib <- as.matrix(pca$co * pca$co)
+corrplot(contrib, is.corr = F) 
+```
+
+## Escores o puntuaciones
+
+```{r}
+as.tibble(scale_data)
+head(pca$li)
+
+output <-
+  as.tibble(pca$li) %>%  
+  dplyr::select(sprintf("Axis%1$s", 1:5))
+```
+
+# cluster 
+
+### jerarquico
+```{r}
+clus <- data3 %>% dplyr::select(-id, -name,-n_reviews,-min_price)
+distanci <- dist(scale(clus), method = "euclidean") # estandariza
+hmodel <- hclust(distanci, method = "ward.D")
+plot(hmodel)
+
+plot(hmodel$height, type = "p")
+
+
+library(rgl)
+
+l <- as.matrix(distanci)
+heatmap(l)
+```
+## modetodo de particionamiento
+
+## BUSCANDO k optimo
+
+### METODO SILUETA
+
+```{r}
+kotimo <- scale(clus) # ESTANDARIZA LSO DATOS 
+set.seed(2021)
+factoextra::fviz_nbclust(
+  kotimo, kmeans, method = "silhouette", k.max = 20
+) #SILUETA
+
+
+```
+### METODO 
+```{r}
+
+set.seed(2021)
+factoextra::fviz_nbclust(
+  kotimo, kmeans, method = "gap_stat", k.max = 20
+)
+
+
+```
+
+```{r}
+
+set.seed(2021)
+factoextra::fviz_nbclust(
+  kotimo, kmeans, method = "wss", k.max = 20
+)
+
+
+```
+
+
+
+
+## Cargamos nuestro dataset
+#Realizamos una pequeña limpieza de los nombre duplicados y pasamos los nombres de los restaurantes como identificador de cada fila
+```{r , message = FALSE,warning = FALSE}
+library(textshape)
+base_datos<-read_excel("C:/Users/KEVIN/Downloads/eda/restaurantes3.xlsx")
+base_datos<- base_datos[!duplicated(base_datos$name), ]
+base_datos<-textshape::column_to_rownames(base_datos, loc = 2)
+```
+
+
+## Filtramos las variables que usaremos y las estandarizaremos
+
+
+```{r , message = FALSE,warning = FALSE}
+df <- as.data.frame(base_datos)
+df <- subset(df, select = c(enfado,anticipacion,disgusto,temor,
+                            alegria,tristesa,sorpresa,confianza,negative,positive))
+df<-scale(df)
+head(df)
+```
+
+## Calculamos la matriz de distacias
+
+```{r , message = FALSE,warning = FALSE}
+m.distancia <- get_dist(df, method = "euclidean") 
+fviz_dist(m.distancia, gradient = list(low = "blue", mid = "white",
+                                       high = "red"))
+```
+                                  
+## Estimamos el número de clústers optimos
+```{r ,warning = FALSE}
+resnumclust<-NbClust::NbClust(data=df, distance = "euclidean", min.nc=2,
+                     max.nc=10, method = "kmeans")
+```
+## grafico entre la frecuencia de indice y su numero optimo de 
+```{r ,warning = FALSE}
+factoextra::fviz_nbclust(resnumclust)
+```
+## Generamos los dos clusters
+```{r ,warning = FALSE}
+set.seed(2021)
+k2 <- kmeans(df, centers = 2, nstart = 200)
+k2$cluster
+```
+## suma de cuadrado intercluster 
+```{r ,warning = FALSE}
+k2$withinss
+```
+## valor de silueta 
+
+```{r ,warning = FALSE}
+siluet <- cluster::silhouette(k2$cluster,dist(df))
+
+factoextra::fviz_silhouette(siluet)+
+  coord_flip()
+```
+
+
+##  Ploteos de los clusters
+```{r ,warning = FALSE}
+library(factoextra)
+fviz_cluster(k2, data = df)
+
+#fviz_cluster(k2, data = df, ellipse.type = "euclid",repel =TRUE,
+#            star.plot = TRUE) 
+#fviz_cluster(k2, data = df, ellipse.type = "norm")
+
+#res2 <- hcut(df, k = 2, stand = TRUE)
+#fviz_dend(res2, rect = TRUE, cex = 0.5,
+ #         k_colors = c("red","#2E9FDF"))
+```
+
+## Pasar los cluster al df inicial para que se pueda trabajar con ellos
+```{r , message = FALSE,warning = FALSE}
+base_datos %>%
+  mutate(Cluster = k2$cluster) %>%
+  group_by(Cluster) %>%
+  summarise_all("mean")
+
+df2 <- base_datos
+df2 <- scale(df)
+df2<- as.data.frame(df)
+df2$clus<-as.factor(k2$cluster)
+```
+
+## giramos la base de datos de manera longitudinal de manera que se pueda apreciar el cluster, la emocion y los valores que le hemos asigando
+```{r , message = FALSE,warning = FALSE}
+df2$clus<-factor(df2$clus)
+data_long <- gather(df2, emocion, valor, enfado:positive, factor_key=TRUE)
+head(data_long)
+```
+## En este plot  podemos observar las relaciones de los valores de cada cluster y las emociones
+```{r , message = FALSE,warning = FALSE}
+ggplot(data_long, aes(as.factor(x = emocion), y = valor,group=clus, colour = clus)) + 
+  stat_summary(fun = mean, geom="pointrange", size = 1)+
+  stat_summary(geom="line")
+geom_point(aes(shape=clus))
+```
+
+
+
+
+
+
+
+
+
+
